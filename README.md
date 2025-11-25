@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/ex_topology.svg" alt="ExTopology" width="200">
+</p>
+
 # ExTopology
 
 [![Hex.pm](https://img.shields.io/hexpm/v/ex_topology.svg)](https://hex.pm/packages/ex_topology)
