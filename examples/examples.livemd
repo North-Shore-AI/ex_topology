@@ -1,0 +1,940 @@
+# ExTopology Scientific Examples
+
+```elixir
+Mix.install([
+  {:ex_topology, path: "./ex_topology"},
+  {:nx, "~> 0.7"},
+  {:libgraph, "~> 0.16"},
+  {:kino, "~> 0.12"},
+  {:kino_vega_lite, "~> 0.1"}
+])
+
+alias ExTopology.{Distance, Graph, Neighborhood, Embedding, Statistics}
+alias VegaLite, as: Vl
+```
+
+## Overview
+
+This notebook demonstrates ExTopology through realistic scientific applications:
+
+1. **Gene Expression Analysis** - Clustering and outlier detection in high-dimensional biological data
+2. **Citation Network Topology** - Analyzing knowledge structure through graph invariants
+3. **Dimensionality Reduction Quality** - Validating t-SNE/UMAP embeddings
+4. **Ecological Community Structure** - Species co-occurrence networks
+5. **Sensor Network Reliability** - Connectivity and redundancy analysis
+6. **Molecular Similarity** - Drug discovery applications
+
+---
+
+## 1. Gene Expression Analysis
+
+Analyzing RNA-seq data to identify outliers and cluster structure using topological methods.
+
+### Simulating Gene Expression Data
+
+```elixir
+# Simulate gene expression data: 50 samples, 100 genes
+# Three distinct cell types plus some outliers
+
+defmodule GeneExpressionSim do
+  def generate(n_samples, n_genes, n_clusters, n_outliers) do
+    key = Nx.Random.key(42)
+    
+    # Generate cluster centers
+    {centers, key} = Nx.Random.uniform(key, shape: {n_clusters, n_genes}, min: 0.0, max: 10.0)
+    
+    # Samples per cluster
+    samples_per_cluster = div(n_samples - n_outliers, n_clusters)
+    
+    # Generate samples around each center
+    {samples, labels, key} = 
+      Enum.reduce(0..(n_clusters - 1), {[], [], key}, fn cluster_idx, {samples_acc, labels_acc, k} ->
+        center = centers[cluster_idx]
+        {noise, k2} = Nx.Random.normal(k, shape: {samples_per_cluster, n_genes}, scale: 0.5)
+        cluster_samples = Nx.add(Nx.broadcast(center, {samples_per_cluster, n_genes}), noise)
+        {
+          [cluster_samples | samples_acc],
+          [List.duplicate(cluster_idx, samples_per_cluster) | labels_acc],
+          k2
+        }
+      end)
+    
+    # Add outliers (random high-variance samples)
+    {outlier_samples, _key} = Nx.Random.uniform(key, shape: {n_outliers, n_genes}, min: -5.0, max: 15.0)
+    
+    all_samples = Nx.concatenate([Nx.concatenate(Enum.reverse(samples)) | [outlier_samples]])
+    all_labels = List.flatten(Enum.reverse(labels)) ++ List.duplicate(-1, n_outliers)
+    
+    {all_samples, all_labels}
+  end
+end
+
+{expression_data, true_labels} = GeneExpressionSim.generate(50, 100, 3, 5)
+
+IO.puts("Expression matrix shape: #{inspect(Nx.shape(expression_data))}")
+IO.puts("Sample labels: #{inspect(true_labels)}")
+```
+
+### Detecting Outlier Samples
+
+```elixir
+# Use isolation scores to detect outlier samples
+# High isolation score = sample is far from its neighbors (potential outlier/batch effect)
+
+isolation_scores = Embedding.isolation_scores(expression_data, k: 5)
+mean_knn_dist = Embedding.mean_knn_distance(expression_data, k: 5)
+
+# Identify potential outliers (isolation score > threshold)
+threshold = 1.5
+scores_list = Nx.to_flat_list(isolation_scores)
+
+outlier_candidates = 
+  scores_list
+  |> Enum.with_index()
+  |> Enum.filter(fn {score, _idx} -> score > threshold end)
+  |> Enum.map(fn {score, idx} -> 
+    %{
+      sample_index: idx, 
+      isolation_score: Float.round(score, 3),
+      true_label: Enum.at(true_labels, idx),
+      is_actual_outlier: Enum.at(true_labels, idx) == -1
+    }
+  end)
+
+IO.puts("\n=== Outlier Detection Results ===")
+IO.puts("Samples with isolation score > #{threshold}:")
+Enum.each(outlier_candidates, fn candidate ->
+  status = if candidate.is_actual_outlier, do: "✓ TRUE OUTLIER", else: "○ False positive"
+  IO.puts("  Sample #{candidate.sample_index}: score=#{candidate.isolation_score} #{status}")
+end)
+
+# Calculate detection accuracy
+actual_outliers = Enum.count(true_labels, &(&1 == -1))
+detected_true = Enum.count(outlier_candidates, & &1.is_actual_outlier)
+IO.puts("\nDetected #{detected_true}/#{actual_outliers} true outliers")
+```
+
+### Visualizing Sample Neighborhoods
+
+```elixir
+# Build k-NN graph and analyze its topology
+knn_graph = Neighborhood.knn_graph(expression_data, k: 5)
+
+# Topological summary
+beta_0 = Graph.beta_zero(knn_graph)
+beta_1 = Graph.beta_one(knn_graph)
+
+IO.puts("\n=== Sample Network Topology ===")
+IO.puts("Connected components (β₀): #{beta_0}")
+IO.puts("  → #{beta_0} distinct sample clusters/groups")
+IO.puts("Independent cycles (β₁): #{beta_1}")
+IO.puts("  → #{beta_1} redundant connections (samples with multiple similar neighbors)")
+
+# Density analysis
+stats = Embedding.statistics(expression_data, k: 5)
+IO.puts("\n=== Embedding Quality Metrics ===")
+IO.puts("Mean k-NN distance: #{Float.round(stats.mean_knn_distance, 3)}")
+IO.puts("k-NN variance: #{Float.round(stats.knn_variance, 5)}")
+IO.puts("  → Low variance indicates consistent local density")
+IO.puts("Density std: #{Float.round(stats.density_std, 3)}")
+IO.puts("  → High std indicates heterogeneous sample distribution")
+```
+
+### Comparing Distance Metrics for Biological Data
+
+```elixir
+# Different distance metrics capture different biological relationships
+# Euclidean: absolute expression differences
+# Cosine: expression profile shape (ignores magnitude)
+# Manhattan: robust to outlier genes
+
+euclidean_dists = Distance.euclidean_matrix(expression_data)
+cosine_dists = Distance.cosine_matrix(expression_data)
+
+# Compare how metrics rank sample similarities
+sample_a = 0  # First sample from cluster 0
+sample_b = 1  # Second sample from cluster 0 (should be similar)
+sample_c = 45 # Sample from different cluster or outlier
+
+IO.puts("\n=== Distance Metric Comparison ===")
+IO.puts("Comparing sample pairs (lower = more similar):\n")
+
+IO.puts("Euclidean distances:")
+IO.puts("  Samples 0-1 (same cluster): #{Nx.to_number(euclidean_dists[0][1]) |> Float.round(3)}")
+IO.puts("  Samples 0-45 (different): #{Nx.to_number(euclidean_dists[0][45]) |> Float.round(3)}")
+
+IO.puts("\nCosine distances:")
+IO.puts("  Samples 0-1 (same cluster): #{Nx.to_number(cosine_dists[0][1]) |> Float.round(4)}")
+IO.puts("  Samples 0-45 (different): #{Nx.to_number(cosine_dists[0][45]) |> Float.round(4)}")
+
+IO.puts("\n💡 Cosine distance ignores expression magnitude,")
+IO.puts("   focusing on relative gene expression patterns.")
+```
+
+---
+
+## 2. Citation Network Topology
+
+Analyzing the structure of scientific knowledge through citation graphs.
+
+### Building a Citation Network
+
+```elixir
+# Simulate a citation network with communities (research fields)
+# and some highly-cited "hub" papers
+
+defmodule CitationNetwork do
+  def generate(n_papers, n_fields, citations_per_paper, n_hubs) do
+    papers_per_field = div(n_papers - n_hubs, n_fields)
+    
+    # Assign papers to fields
+    field_assignments = 
+      Enum.flat_map(0..(n_fields - 1), fn field ->
+        List.duplicate(field, papers_per_field)
+      end) ++ List.duplicate(:hub, n_hubs)
+    
+    # Generate citations (papers cite earlier papers, preferring same field)
+    edges = 
+      for paper <- 1..(n_papers - 1),
+          _ <- 1..citations_per_paper,
+          target = generate_citation(paper, field_assignments),
+          target != nil,
+          do: {target, paper}  # target -> paper (paper cites target)
+    
+    graph = Graph.new(type: :directed)
+            |> Graph.add_vertices(Enum.to_list(0..(n_papers - 1)))
+            |> Graph.add_edges(Enum.uniq(edges))
+    
+    {graph, field_assignments}
+  end
+  
+  defp generate_citation(paper, assignments) do
+    my_field = Enum.at(assignments, paper)
+    
+    # 70% chance to cite same field, 30% any field
+    candidates = 
+      if :rand.uniform() < 0.7 and my_field != :hub do
+        Enum.with_index(assignments)
+        |> Enum.filter(fn {field, idx} -> field == my_field and idx < paper end)
+        |> Enum.map(fn {_, idx} -> idx end)
+      else
+        Enum.to_list(0..(paper - 1))
+      end
+    
+    if candidates == [], do: nil, else: Enum.random(candidates)
+  end
+end
+
+{citation_graph, paper_fields} = CitationNetwork.generate(100, 4, 3, 5)
+
+IO.puts("=== Citation Network ===")
+IO.puts("Papers: #{Graph.num_vertices(citation_graph)}")
+IO.puts("Citations: #{Graph.num_edges(citation_graph)}")
+```
+
+### Analyzing Network Topology
+
+```elixir
+# Convert to undirected for topological analysis
+undirected_citations = 
+  citation_graph
+  |> Graph.edges()
+  |> Enum.map(fn e -> {e.v1, e.v2} end)
+  |> then(fn edges ->
+    Graph.new(type: :undirected)
+    |> Graph.add_vertices(Graph.vertices(citation_graph))
+    |> Graph.add_edges(edges)
+  end)
+
+invariants = Graph.invariants(undirected_citations)
+
+IO.puts("\n=== Topological Invariants ===")
+IO.puts("β₀ (connected components): #{invariants.beta_zero}")
+IO.puts("  → #{invariants.beta_zero} isolated research communities")
+IO.puts("β₁ (cycles): #{invariants.beta_one}")  
+IO.puts("  → #{invariants.beta_one} 'circular' citation patterns")
+IO.puts("Euler characteristic χ: #{invariants.euler_characteristic}")
+IO.puts("\nInterpretation:")
+IO.puts("  High β₁ suggests interconnected literature with multiple paths")
+IO.puts("  between papers (healthy cross-pollination of ideas)")
+
+# Check if network is a tree (no cycles = isolated knowledge silos)
+if Graph.tree?(undirected_citations) do
+  IO.puts("\n⚠️  Network is a tree - knowledge flows linearly without cross-references")
+else
+  IO.puts("\n✓ Network has cycles - ideas are being synthesized across papers")
+end
+```
+
+### Field Connectivity Analysis
+
+```elixir
+# Analyze how research fields connect to each other
+
+# Group papers by field
+field_groups = 
+  paper_fields
+  |> Enum.with_index()
+  |> Enum.group_by(fn {field, _idx} -> field end, fn {_field, idx} -> idx end)
+
+IO.puts("\n=== Inter-field Connectivity ===")
+
+# Count citations between fields
+cross_field_citations = 
+  Graph.edges(citation_graph)
+  |> Enum.count(fn edge ->
+    field_from = Enum.at(paper_fields, edge.v1)
+    field_to = Enum.at(paper_fields, edge.v2)
+    field_from != field_to and field_from != :hub and field_to != :hub
+  end)
+
+total_citations = Graph.num_edges(citation_graph)
+cross_field_pct = Float.round(100 * cross_field_citations / total_citations, 1)
+
+IO.puts("Cross-field citations: #{cross_field_citations}/#{total_citations} (#{cross_field_pct}%)")
+IO.puts("  → Higher % indicates more interdisciplinary research")
+```
+
+---
+
+## 3. Dimensionality Reduction Quality Assessment
+
+Validating that t-SNE/UMAP embeddings preserve neighborhood structure.
+
+### Simulating High-Dimensional Data and Its Embedding
+
+```elixir
+# Original high-dimensional data (e.g., 50D single-cell data)
+# and its 2D embedding (simulating t-SNE/UMAP output)
+
+defmodule EmbeddingQuality do
+  def generate_data_and_embedding(n_points, high_dim, low_dim, n_clusters) do
+    key = Nx.Random.key(123)
+    
+    # Generate clustered high-dimensional data
+    points_per_cluster = div(n_points, n_clusters)
+    
+    {high_dim_data, key} = 
+      Enum.reduce(0..(n_clusters - 1), {[], key}, fn _cluster, {acc, k} ->
+        # Random cluster center
+        {center, k2} = Nx.Random.uniform(k, shape: {high_dim}, min: -5.0, max: 5.0)
+        # Points around center
+        {noise, k3} = Nx.Random.normal(k2, shape: {points_per_cluster, high_dim}, scale: 1.0)
+        cluster_points = Nx.add(Nx.broadcast(center, {points_per_cluster, high_dim}), noise)
+        {[cluster_points | acc], k3}
+      end)
+    
+    high_dim_tensor = Nx.concatenate(Enum.reverse(high_dim_data))
+    
+    # Simulate "good" embedding that preserves cluster structure
+    {good_embedding, key} = 
+      Enum.reduce(0..(n_clusters - 1), {[], key}, fn cluster, {acc, k} ->
+        # 2D cluster center (well-separated)
+        angle = 2 * :math.pi() * cluster / n_clusters
+        center_x = 5.0 * :math.cos(angle)
+        center_y = 5.0 * :math.sin(angle)
+        {noise, k2} = Nx.Random.normal(k, shape: {points_per_cluster, low_dim}, scale: 0.5)
+        center = Nx.tensor([center_x, center_y])
+        cluster_points = Nx.add(Nx.broadcast(center, {points_per_cluster, low_dim}), noise)
+        {[cluster_points | acc], k2}
+      end)
+    
+    good_embedding_tensor = Nx.concatenate(Enum.reverse(good_embedding))
+    
+    # Simulate "bad" embedding (random projection, loses structure)
+    {bad_embedding, _} = Nx.Random.normal(key, shape: {n_points, low_dim}, scale: 3.0)
+    
+    {high_dim_tensor, good_embedding_tensor, bad_embedding}
+  end
+end
+
+{original_data, good_embedding, bad_embedding} = 
+  EmbeddingQuality.generate_data_and_embedding(200, 50, 2, 5)
+
+IO.puts("Original data: #{inspect(Nx.shape(original_data))}")
+IO.puts("Embeddings: #{inspect(Nx.shape(good_embedding))}")
+```
+
+### Comparing Embedding Quality
+
+```elixir
+# Key insight: Good embeddings preserve local neighborhoods
+# We measure this using k-NN variance and density consistency
+
+k = 10  # neighborhood size
+
+original_stats = Embedding.statistics(original_data, k: k)
+good_stats = Embedding.statistics(good_embedding, k: k)
+bad_stats = Embedding.statistics(bad_embedding, k: k)
+
+IO.puts("=== Embedding Quality Comparison ===\n")
+IO.puts("Metric                    Original    Good Embed   Bad Embed")
+IO.puts("─────────────────────────────────────────────────────────────")
+IO.puts("k-NN variance:            #{Float.round(original_stats.knn_variance, 4) |> to_string() |> String.pad_leading(8)}    #{Float.round(good_stats.knn_variance, 4) |> to_string() |> String.pad_leading(8)}     #{Float.round(bad_stats.knn_variance, 4) |> to_string() |> String.pad_leading(8)}")
+IO.puts("Mean k-NN distance:       #{Float.round(original_stats.mean_knn_distance, 4) |> to_string() |> String.pad_leading(8)}    #{Float.round(good_stats.mean_knn_distance, 4) |> to_string() |> String.pad_leading(8)}     #{Float.round(bad_stats.mean_knn_distance, 4) |> to_string() |> String.pad_leading(8)}")
+IO.puts("Density std:              #{Float.round(original_stats.density_std, 4) |> to_string() |> String.pad_leading(8)}    #{Float.round(good_stats.density_std, 4) |> to_string() |> String.pad_leading(8)}     #{Float.round(bad_stats.density_std, 4) |> to_string() |> String.pad_leading(8)}")
+
+IO.puts("\n💡 Interpretation:")
+IO.puts("   • Good embedding has similar k-NN variance pattern to original")
+IO.puts("   • Bad embedding has uniform density (lost cluster structure)")
+```
+
+### Neighborhood Preservation Analysis
+
+```elixir
+# More rigorous test: Do the same points remain neighbors?
+
+# Get k-NN for original and embedded data
+k = 10
+
+original_dists = Distance.euclidean_matrix(original_data)
+good_dists = Distance.euclidean_matrix(good_embedding)
+bad_dists = Distance.euclidean_matrix(bad_embedding)
+
+defmodule NeighborhoodPreservation do
+  def get_knn_sets(distance_matrix, k) do
+    n = elem(Nx.shape(distance_matrix), 0)
+    
+    for i <- 0..(n - 1) do
+      row = Nx.to_flat_list(distance_matrix[i])
+      row
+      |> Enum.with_index()
+      |> Enum.reject(fn {_d, idx} -> idx == i end)
+      |> Enum.sort_by(fn {d, _idx} -> d end)
+      |> Enum.take(k)
+      |> Enum.map(fn {_d, idx} -> idx end)
+      |> MapSet.new()
+    end
+  end
+  
+  def jaccard_similarity(set1, set2) do
+    intersection = MapSet.intersection(set1, set2) |> MapSet.size()
+    union = MapSet.union(set1, set2) |> MapSet.size()
+    if union == 0, do: 1.0, else: intersection / union
+  end
+  
+  def mean_preservation(original_neighbors, embedded_neighbors) do
+    Enum.zip(original_neighbors, embedded_neighbors)
+    |> Enum.map(fn {orig, emb} -> jaccard_similarity(orig, emb) end)
+    |> Enum.sum()
+    |> Kernel./(length(original_neighbors))
+  end
+end
+
+original_neighbors = NeighborhoodPreservation.get_knn_sets(original_dists, k)
+good_neighbors = NeighborhoodPreservation.get_knn_sets(good_dists, k)
+bad_neighbors = NeighborhoodPreservation.get_knn_sets(bad_dists, k)
+
+good_preservation = NeighborhoodPreservation.mean_preservation(original_neighbors, good_neighbors)
+bad_preservation = NeighborhoodPreservation.mean_preservation(original_neighbors, bad_neighbors)
+
+IO.puts("\n=== Neighborhood Preservation (Jaccard Similarity) ===")
+IO.puts("Good embedding: #{Float.round(good_preservation * 100, 1)}% neighbors preserved")
+IO.puts("Bad embedding:  #{Float.round(bad_preservation * 100, 1)}% neighbors preserved")
+IO.puts("\n✓ Good embeddings preserve >50% of local neighborhoods")
+IO.puts("✗ Random projections preserve ~#{round(k / 200 * 100)}% (chance level)")
+```
+
+---
+
+## 4. Ecological Community Structure
+
+Analyzing species co-occurrence patterns using neighborhood graphs.
+
+### Building a Species Co-occurrence Network
+
+```elixir
+# Species occurrence data: which species co-occur at same sites
+# Build a network where species are connected if they frequently co-occur
+
+defmodule EcologyNetwork do
+  def generate_occurrence_data(n_species, n_sites, n_guilds) do
+    key = Nx.Random.key(456)
+    
+    # Assign species to ecological guilds
+    species_per_guild = div(n_species, n_guilds)
+    guild_assignments = 
+      Enum.flat_map(0..(n_guilds - 1), fn guild ->
+        List.duplicate(guild, species_per_guild)
+      end)
+    
+    # Generate occurrence probabilities (species in same guild co-occur more)
+    {occurrences, _} = 
+      Enum.reduce(0..(n_sites - 1), {[], key}, fn _site, {acc, k} ->
+        # Each site has certain guilds present
+        {guild_present, k2} = Nx.Random.uniform(k, shape: {n_guilds})
+        guild_present = Nx.greater(guild_present, 0.4)  # 60% chance per guild
+        
+        # Species present if their guild is present (with some noise)
+        {noise, k3} = Nx.Random.uniform(k2, shape: {n_species})
+        
+        site_occurrences = 
+          guild_assignments
+          |> Enum.with_index()
+          |> Enum.map(fn {guild, species_idx} ->
+            guild_here = Nx.to_number(guild_present[guild])
+            random_val = Nx.to_number(noise[species_idx])
+            
+            cond do
+              guild_here == 1 and random_val > 0.3 -> 1  # Present
+              guild_here == 0 and random_val > 0.9 -> 1  # Rare vagrant
+              true -> 0
+            end
+          end)
+        
+        {[site_occurrences | acc], k3}
+      end)
+    
+    occurrence_matrix = Nx.tensor(Enum.reverse(occurrences))
+    {occurrence_matrix, guild_assignments}
+  end
+  
+  def build_cooccurrence_network(occurrence_matrix, min_cooccurrences) do
+    # occurrence_matrix: {n_sites, n_species}
+    # Compute species × species co-occurrence counts
+    species_matrix = Nx.transpose(occurrence_matrix)  # {n_species, n_sites}
+    
+    # Co-occurrence = dot product of presence vectors
+    cooccurrence = Nx.dot(species_matrix, Nx.transpose(species_matrix))
+    
+    # Build graph: edge if co-occurrence >= threshold
+    n_species = elem(Nx.shape(cooccurrence), 0)
+    cooc_list = Nx.to_list(cooccurrence)
+    
+    edges = 
+      for i <- 0..(n_species - 2),
+          j <- (i + 1)..(n_species - 1),
+          cooc = Enum.at(Enum.at(cooc_list, i), j),
+          cooc >= min_cooccurrences,
+          do: {i, j}
+    
+    Graph.new(type: :undirected)
+    |> Graph.add_vertices(Enum.to_list(0..(n_species - 1)))
+    |> Graph.add_edges(edges)
+  end
+end
+
+{occurrence_data, species_guilds} = EcologyNetwork.generate_occurrence_data(30, 50, 4)
+cooccurrence_network = EcologyNetwork.build_cooccurrence_network(occurrence_data, 5)
+
+IO.puts("=== Ecological Co-occurrence Network ===")
+IO.puts("Species: #{Graph.num_vertices(cooccurrence_network)}")
+IO.puts("Co-occurrence links: #{Graph.num_edges(cooccurrence_network)}")
+```
+
+### Analyzing Community Structure
+
+```elixir
+# Use topological measures to understand ecological structure
+
+invariants = Graph.invariants(cooccurrence_network)
+
+IO.puts("\n=== Community Topology ===")
+IO.puts("Connected components (β₀): #{invariants.beta_zero}")
+IO.puts("  → #{invariants.beta_zero} distinct ecological communities")
+IO.puts("Cycles (β₁): #{invariants.beta_one}")
+IO.puts("Euler characteristic: #{invariants.euler_characteristic}")
+
+# Compare to random network expectations
+n = invariants.vertices
+e = invariants.edges
+expected_beta1_complete = div(n * (n - 1), 2) - n + 1
+
+IO.puts("\n=== Structure Analysis ===")
+IO.puts("Edge density: #{Float.round(e / (n * (n-1) / 2) * 100, 1)}%")
+
+if invariants.beta_one > 0 do
+  IO.puts("✓ Network has cycles - species form interconnected communities")
+  IO.puts("  (not simple tree-like food webs)")
+else
+  IO.puts("○ Network is a forest - hierarchical community structure")
+end
+
+# Check for isolated species
+if invariants.beta_zero > 1 do
+  IO.puts("\n⚠️  #{invariants.beta_zero - 1} isolated species/groups detected")
+  IO.puts("   These may be rare specialists or sampling artifacts")
+end
+```
+
+### Guild Detection via Graph Components
+
+```elixir
+# See if topological components match ecological guilds
+
+components = Graph.components(cooccurrence_network)
+
+IO.puts("\n=== Detected vs True Guilds ===")
+IO.puts("Graph components found: #{length(components)}")
+IO.puts("True ecological guilds: #{Enum.uniq(species_guilds) |> length()}")
+
+# Analyze each component
+Enum.with_index(components)
+|> Enum.each(fn {component, idx} ->
+  guild_distribution = 
+    component
+    |> Enum.map(&Enum.at(species_guilds, &1))
+    |> Enum.frequencies()
+  
+  IO.puts("\nComponent #{idx + 1} (#{length(component)} species):")
+  Enum.each(guild_distribution, fn {guild, count} ->
+    IO.puts("  Guild #{guild}: #{count} species")
+  end)
+end)
+```
+
+---
+
+## 5. Sensor Network Reliability
+
+Analyzing redundancy and connectivity in distributed sensor networks.
+
+### Building a Sensor Network
+
+```elixir
+# Sensors at physical locations, connected if within communication range
+
+defmodule SensorNetwork do
+  def generate(n_sensors, area_size, comm_range) do
+    key = Nx.Random.key(789)
+    
+    # Random sensor positions
+    {positions, _} = Nx.Random.uniform(key, shape: {n_sensors, 2}, min: 0.0, max: area_size)
+    
+    # Build connectivity graph based on communication range
+    distances = Distance.euclidean_matrix(positions)
+    graph = Neighborhood.from_distance_matrix(distances, epsilon: comm_range)
+    
+    {positions, graph}
+  end
+end
+
+{sensor_positions, sensor_network} = SensorNetwork.generate(40, 100.0, 25.0)
+
+IO.puts("=== Sensor Network ===")
+IO.puts("Sensors: #{Graph.num_vertices(sensor_network)}")
+IO.puts("Communication links: #{Graph.num_edges(sensor_network)}")
+```
+
+### Network Reliability Analysis
+
+```elixir
+# Key metrics for sensor network reliability
+
+invariants = Graph.invariants(sensor_network)
+
+IO.puts("\n=== Reliability Metrics ===")
+
+# Connectivity
+if Graph.connected?(sensor_network) do
+  IO.puts("✓ Network is fully connected - all sensors can communicate")
+else
+  IO.puts("✗ Network has #{invariants.beta_zero} isolated segments!")
+  IO.puts("  → Need additional sensors or longer-range radios")
+end
+
+# Redundancy (cycles = backup paths)
+IO.puts("\nRedundant paths (β₁): #{invariants.beta_one}")
+if invariants.beta_one > 0 do
+  IO.puts("  → #{invariants.beta_one} backup communication routes exist")
+  IO.puts("  → Network can tolerate some link failures")
+else
+  IO.puts("  ⚠️  No redundancy - single points of failure exist")
+end
+
+# Average connectivity
+avg_degree = 2 * invariants.edges / max(invariants.vertices, 1)
+IO.puts("\nAverage connections per sensor: #{Float.round(avg_degree, 1)}")
+```
+
+### Identifying Critical Sensors
+
+```elixir
+# Find sensors whose failure would fragment the network
+
+defmodule CriticalNodes do
+  def find_articulation_points(graph) do
+    # A node is critical if removing it increases β₀
+    original_components = ExTopology.Graph.beta_zero(graph)
+    vertices = Graph.vertices(graph)
+    
+    Enum.filter(vertices, fn v ->
+      # Remove vertex and its edges
+      reduced = Graph.delete_vertex(graph, v)
+      new_components = ExTopology.Graph.beta_zero(reduced)
+      new_components > original_components
+    end)
+  end
+end
+
+critical_sensors = CriticalNodes.find_articulation_points(sensor_network)
+
+IO.puts("\n=== Critical Infrastructure ===")
+IO.puts("Critical sensors (articulation points): #{length(critical_sensors)}")
+
+if length(critical_sensors) > 0 do
+  IO.puts("Sensor IDs: #{inspect(critical_sensors)}")
+  IO.puts("\n⚠️  These sensors are single points of failure!")
+  IO.puts("   Recommendations:")
+  IO.puts("   • Add backup sensors near these locations")
+  IO.puts("   • Increase redundancy with longer-range links")
+  
+  vulnerability_pct = Float.round(length(critical_sensors) / Graph.num_vertices(sensor_network) * 100, 1)
+  IO.puts("\nVulnerability: #{vulnerability_pct}% of sensors are critical")
+else
+  IO.puts("✓ No single points of failure - robust network design")
+end
+```
+
+### Communication Range Sensitivity
+
+```elixir
+# How does connectivity change with communication range?
+
+ranges = [15.0, 20.0, 25.0, 30.0, 35.0, 40.0]
+
+range_analysis = 
+  Enum.map(ranges, fn range ->
+    {_positions, network} = SensorNetwork.generate(40, 100.0, range)
+    inv = Graph.invariants(network)
+    
+    %{
+      range: range,
+      components: inv.beta_zero,
+      redundancy: inv.beta_one,
+      connected: inv.beta_zero == 1,
+      edges: inv.edges
+    }
+  end)
+
+IO.puts("\n=== Range vs Connectivity ===")
+IO.puts("Range    Components  Redundancy  Connected  Links")
+IO.puts("──────────────────────────────────────────────────")
+Enum.each(range_analysis, fn r ->
+  status = if r.connected, do: "✓", else: "✗"
+  IO.puts("#{r.range |> Float.round(0) |> trunc() |> to_string() |> String.pad_leading(5)}m   #{r.components |> to_string() |> String.pad_leading(5)}       #{r.redundancy |> to_string() |> String.pad_leading(5)}         #{status}        #{r.edges}")
+end)
+
+# Find minimum range for connectivity
+min_connected_range = 
+  range_analysis
+  |> Enum.find(& &1.connected)
+  |> then(fn r -> if r, do: r.range, else: ">40" end)
+
+IO.puts("\n💡 Minimum range for full connectivity: ~#{min_connected_range}m")
+```
+
+---
+
+## 6. Molecular Similarity for Drug Discovery
+
+Using distance metrics on molecular fingerprints for compound screening.
+
+### Generating Molecular Fingerprint Data
+
+```elixir
+# Molecular fingerprints: binary or count vectors representing chemical features
+# Similar molecules should cluster together
+
+defmodule MolecularSim do
+  def generate_fingerprints(n_compounds, fingerprint_size, n_scaffolds) do
+    key = Nx.Random.key(321)
+    compounds_per_scaffold = div(n_compounds, n_scaffolds)
+    
+    # Generate scaffold "templates"
+    {scaffolds, key} = 
+      Enum.reduce(0..(n_scaffolds - 1), {[], key}, fn _scaffold, {acc, k} ->
+        {template, k2} = Nx.Random.uniform(k, shape: {fingerprint_size})
+        # Binarize: feature present if > 0.7
+        template = Nx.greater(template, 0.7) |> Nx.as_type(:f32)
+        {[template | acc], k2}
+      end)
+    
+    scaffolds = Enum.reverse(scaffolds)
+    
+    # Generate compounds as variations of scaffolds
+    {fingerprints, scaffold_labels, _} = 
+      Enum.reduce(0..(n_scaffolds - 1), {[], [], key}, fn scaffold_idx, {fps, labels, k} ->
+        scaffold = Enum.at(scaffolds, scaffold_idx)
+        
+        {compounds, k2} = 
+          Enum.reduce(1..compounds_per_scaffold, {[], k}, fn _i, {comp_acc, k3} ->
+            # Random mutations from scaffold
+            {noise, k4} = Nx.Random.uniform(k3, shape: {fingerprint_size})
+            mutations = Nx.greater(noise, 0.9)  # 10% bit flip rate
+            compound = Nx.logical_xor(scaffold, mutations) |> Nx.as_type(:f32)
+            {[compound | comp_acc], k4}
+          end)
+        
+        {compounds ++ fps, List.duplicate(scaffold_idx, compounds_per_scaffold) ++ labels, k2}
+      end)
+    
+    fingerprint_matrix = Nx.stack(fingerprints)
+    {fingerprint_matrix, scaffold_labels}
+  end
+end
+
+{fingerprints, scaffold_ids} = MolecularSim.generate_fingerprints(60, 256, 5)
+
+IO.puts("=== Molecular Fingerprint Data ===")
+IO.puts("Compounds: #{elem(Nx.shape(fingerprints), 0)}")
+IO.puts("Fingerprint bits: #{elem(Nx.shape(fingerprints), 1)}")
+IO.puts("Chemical scaffolds: #{Enum.uniq(scaffold_ids) |> length()}")
+```
+
+### Computing Molecular Similarity
+
+```elixir
+# Tanimoto coefficient is standard for molecular fingerprints
+# For binary vectors: Tanimoto = intersection / union
+# Approximated by cosine similarity for normalized vectors
+
+# Euclidean and cosine distances
+euclidean_dists = Distance.euclidean_matrix(fingerprints)
+cosine_dists = Distance.cosine_matrix(fingerprints)
+
+# Convert cosine distance to similarity (1 - distance for normalized)
+# Note: For binary fingerprints, cosine similarity ≈ Tanimoto
+
+IO.puts("\n=== Distance Metric Comparison ===")
+
+# Compare within-scaffold vs between-scaffold distances
+within_pairs = 
+  for i <- 0..58, j <- (i+1)..59,
+      Enum.at(scaffold_ids, i) == Enum.at(scaffold_ids, j),
+      do: {i, j}
+
+between_pairs = 
+  for i <- 0..58, j <- (i+1)..59,
+      Enum.at(scaffold_ids, i) != Enum.at(scaffold_ids, j),
+      do: {i, j}
+
+within_euclidean = Enum.map(within_pairs, fn {i, j} -> Nx.to_number(euclidean_dists[i][j]) end)
+between_euclidean = Enum.map(between_pairs, fn {i, j} -> Nx.to_number(euclidean_dists[i][j]) end)
+
+within_cosine = Enum.map(within_pairs, fn {i, j} -> Nx.to_number(cosine_dists[i][j]) end)
+between_cosine = Enum.map(between_pairs, fn {i, j} -> Nx.to_number(cosine_dists[i][j]) end)
+
+IO.puts("Euclidean distance:")
+IO.puts("  Within scaffold (mean):  #{Enum.sum(within_euclidean) / length(within_euclidean) |> Float.round(2)}")
+IO.puts("  Between scaffolds (mean): #{Enum.sum(between_euclidean) / length(between_euclidean) |> Float.round(2)}")
+
+IO.puts("\nCosine distance:")
+IO.puts("  Within scaffold (mean):  #{Enum.sum(within_cosine) / length(within_cosine) |> Float.round(3)}")
+IO.puts("  Between scaffolds (mean): #{Enum.sum(between_cosine) / length(between_cosine) |> Float.round(3)}")
+
+# Effect size
+within_tensor = Nx.tensor(within_cosine)
+between_tensor = Nx.tensor(between_cosine)
+effect = Statistics.cohens_d(between_tensor, within_tensor) |> Nx.to_number()
+IO.puts("\nSeparation (Cohen's d): #{Float.round(effect, 2)}")
+IO.puts("  → #{if abs(effect) > 0.8, do: "Large", else: if abs(effect) > 0.5, do: "Medium", else: "Small"} effect size")
+```
+
+### Building Similarity Networks
+
+```elixir
+# Build molecular similarity network for virtual screening
+# Connect compounds with high structural similarity
+
+# Use epsilon-ball graph with cosine distance threshold
+similarity_threshold = 0.3  # Connect if cosine distance < 0.3
+
+mol_network = Neighborhood.from_distance_matrix(cosine_dists, epsilon: similarity_threshold)
+
+IO.puts("\n=== Molecular Similarity Network ===")
+IO.puts("Similarity threshold: cosine distance < #{similarity_threshold}")
+IO.puts("Compounds: #{Graph.num_vertices(mol_network)}")
+IO.puts("Similar pairs: #{Graph.num_edges(mol_network)}")
+
+invariants = Graph.invariants(mol_network)
+IO.puts("\nTopological structure:")
+IO.puts("  Clusters (β₀): #{invariants.beta_zero}")
+IO.puts("  Redundant connections (β₁): #{invariants.beta_one}")
+
+# Do clusters match scaffolds?
+IO.puts("\n=== Cluster vs Scaffold Analysis ===")
+components = Graph.components(mol_network)
+
+Enum.with_index(components)
+|> Enum.take(5)  # Show first 5 components
+|> Enum.each(fn {component, idx} ->
+  scaffold_dist = 
+    component
+    |> Enum.map(&Enum.at(scaffold_ids, &1))
+    |> Enum.frequencies()
+  
+  dominant_scaffold = scaffold_dist |> Enum.max_by(fn {_k, v} -> v end) |> elem(0)
+  purity = scaffold_dist[dominant_scaffold] / length(component) * 100
+  
+  IO.puts("Cluster #{idx + 1}: #{length(component)} compounds, #{Float.round(purity, 0)}% scaffold #{dominant_scaffold}")
+end)
+```
+
+### Hit Expansion: Finding Similar Compounds
+
+```elixir
+# Given a "hit" compound, find structurally similar compounds for SAR studies
+
+defmodule HitExpansion do
+  def find_similar(fingerprints, hit_index, distance_matrix, top_k) do
+    hit_distances = Nx.to_flat_list(distance_matrix[hit_index])
+    
+    hit_distances
+    |> Enum.with_index()
+    |> Enum.reject(fn {_d, idx} -> idx == hit_index end)
+    |> Enum.sort_by(fn {d, _idx} -> d end)
+    |> Enum.take(top_k)
+    |> Enum.map(fn {dist, idx} -> %{compound: idx, distance: Float.round(dist, 4)} end)
+  end
+end
+
+hit_compound = 0  # Assume compound 0 is our screening hit
+similar_compounds = HitExpansion.find_similar(fingerprints, hit_compound, cosine_dists, 5)
+
+IO.puts("\n=== Hit Expansion for Compound #{hit_compound} ===")
+IO.puts("Scaffold of hit: #{Enum.at(scaffold_ids, hit_compound)}")
+IO.puts("\nTop 5 similar compounds for SAR:")
+Enum.each(similar_compounds, fn %{compound: idx, distance: dist} ->
+  scaffold = Enum.at(scaffold_ids, idx)
+  match = if scaffold == Enum.at(scaffold_ids, hit_compound), do: "✓ same scaffold", else: "○ different scaffold"
+  IO.puts("  Compound #{idx}: distance=#{dist} #{match}")
+end)
+```
+
+---
+
+## Summary: Key Patterns for Scientific Applications
+
+```elixir
+IO.puts("""
+=== ExTopology Scientific Patterns ===
+
+1. OUTLIER DETECTION
+   isolation_scores(data, k: 5) → High scores indicate outliers
+   sparse_points(data, k: 5, percentile: 10) → Bottom 10% density
+
+2. CLUSTER STRUCTURE  
+   knn_graph(data, k: 5) |> Graph.beta_zero() → Number of clusters
+   epsilon_graph(data, epsilon: θ) → Density-based clustering
+
+3. NETWORK ANALYSIS
+   Graph.beta_one(network) → Redundancy/cycles
+   Graph.connected?(network) → Full connectivity
+   Graph.tree?(network) → Hierarchical structure
+
+4. EMBEDDING QUALITY
+   Embedding.knn_variance(data, k: 10) → Local consistency
+   Compare original vs embedded neighborhood preservation
+
+5. METRIC SELECTION
+   Euclidean: Absolute differences (expression levels)
+   Cosine: Shape/direction (embeddings, fingerprints)
+   Manhattan: Robust to outlier dimensions
+
+6. STATISTICAL ANALYSIS
+   Statistics.cohens_d(group1, group2) → Effect size
+   Statistics.pearson/spearman → Correlation
+   Statistics.isolation_scores → LOF-style outlier detection
+""")
+```

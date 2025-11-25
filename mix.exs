@@ -63,8 +63,16 @@ defmodule ExTopology.MixProject do
     [
       maintainers: ["North-Shore-AI"],
       licenses: ["MIT"],
+      files: [
+        "lib",
+        "mix.exs",
+        "README.md",
+        "LICENSE",
+        "assets"
+      ],
       links: %{
-        "GitHub" => @source_url
+        "GitHub" => @source_url,
+        "Docs" => "https://hexdocs.pm/ex_topology"
       }
     ]
   end
@@ -74,9 +82,11 @@ defmodule ExTopology.MixProject do
       main: "readme",
       source_url: @source_url,
       source_ref: "v#{@version}",
+      logo: "assets/ex_topology.svg",
+      assets: %{"assets" => "assets"},
       extras: [
         "README.md",
-        "docs/adrs/ADR-README.md"
+        "LICENSE"
       ],
       groups_for_modules: [
         "Graph Topology": [

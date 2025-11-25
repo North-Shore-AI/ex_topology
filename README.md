@@ -1,12 +1,18 @@
 # ExTopology
 
+![ExTopology logo](assets/ex_topology.svg)
+
+[![Hex.pm](https://img.shields.io/hexpm/v/ex_topology.svg)](https://hex.pm/packages/ex_topology)
+[![Docs](https://img.shields.io/badge/docs-hexdocs.pm-blue.svg)](https://hexdocs.pm/ex_topology)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 **Generic Topological Data Analysis for Elixir**
 
 ExTopology provides foundational topology and TDA algorithms for the Elixir ecosystem. It extracts generic mathematical operations from domain-specific implementations, making them reusable across applications.
 
 ## Status
 
-**Pre-Alpha** - Architecture defined, implementation in progress.
+**v0.1.0** - Core features implemented and tested (200 tests passing).
 
 ## Vision
 
@@ -46,14 +52,8 @@ ExTopology is the topology layer for the North-Shore-AI ecosystem:
 
 ## Architecture Decisions
 
-See [docs/adrs/](docs/adrs/) for architecture decision records:
-
-- [ADR-0001: Use libgraph for Graph Algorithms](docs/adrs/0001-use-libgraph-for-graph-algorithms.md)
-- [ADR-0002: Use Nx/Scholar for Numerical Foundations](docs/adrs/0002-use-nx-scholar-for-numerical-foundations.md)
-- [ADR-0003: Build TDA from Scratch](docs/adrs/0003-build-tda-from-scratch.md)
-- [ADR-0004: Layered Architecture Design](docs/adrs/0004-layered-architecture.md)
-- [ADR-0005: Sparse Matrix Strategy](docs/adrs/0005-sparse-matrix-strategy.md)
-- [ADR-0006: API Design Principles](docs/adrs/0006-api-design-principles.md)
+Architecture decision records live in the repository but are not shipped with the Hex package or docs. You can browse them on GitHub:
+https://github.com/North-Shore-AI/ex_topology/tree/main/docs/adrs
 
 ## Installation
 
@@ -66,6 +66,49 @@ def deps do
   ]
 end
 ```
+
+## Quick Start
+
+```elixir
+alias ExTopology.{Distance, Neighborhood, Embedding, Statistics}
+alias ExTopology.Graph, as: Topo
+
+# Compute pairwise distances
+points = Nx.tensor([[0.0, 0.0], [3.0, 4.0], [1.0, 0.0]])
+dists = Distance.euclidean_matrix(points)
+
+# Build neighborhood graph
+g = Neighborhood.epsilon_graph(points, epsilon: 5.5)
+
+# Compute topological invariants
+Topo.beta_zero(g)           # Connected components
+Topo.beta_one(g)            # Independent cycles
+Topo.euler_characteristic(g) # V - E
+
+# Analyze embedding quality
+Embedding.knn_variance(points, k: 2)
+Embedding.isolation_scores(points, k: 2)
+
+# Statistical analysis
+Statistics.pearson(x, y)
+Statistics.cohens_d(group1, group2)
+```
+
+## Examples
+
+Run the included examples to see ExTopology in action:
+
+```bash
+# Run all examples
+./examples/run_all_exs.sh
+
+# Or run individually
+mix run examples/quick_examples.exs
+mix run examples/correlation_network.exs
+mix run examples/outlier_detection.exs
+```
+
+See [examples/README.md](examples/README.md) for detailed descriptions.
 
 ## Motivation
 
@@ -83,7 +126,7 @@ ExTopology extracts these algorithms into a reusable library, enabling:
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup.
+Contributions are welcome; development setup docs will be added soon.
 
 ## License
 
