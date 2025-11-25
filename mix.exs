@@ -1,7 +1,7 @@
 defmodule ExTopology.MixProject do
   use Mix.Project
 
-  @version "0.1.0"
+  @version "0.1.1"
   @source_url "https://github.com/North-Shore-AI/ex_topology"
 
   def project do
@@ -94,7 +94,14 @@ defmodule ExTopology.MixProject do
         ],
         "Data Structures": [
           ExTopology.Distance,
-          ExTopology.Neighborhood
+          ExTopology.Neighborhood,
+          ExTopology.Simplex,
+          ExTopology.Filtration
+        ],
+        "Persistent Homology": [
+          ExTopology.Persistence,
+          ExTopology.Diagram,
+          ExTopology.Fragility
         ],
         "Embedding Analysis": [
           ExTopology.Embedding,
