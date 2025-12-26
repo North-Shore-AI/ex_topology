@@ -1,7 +1,7 @@
 defmodule ExTopology.MixProject do
   use Mix.Project
 
-  @version "0.1.1"
+  @version "0.2.0"
   @source_url "https://github.com/North-Shore-AI/ex_topology"
 
   def project do
@@ -19,6 +19,8 @@ defmodule ExTopology.MixProject do
 
       # Docs
       name: "ExTopology",
+      source_url: @source_url,
+      homepage_url: @source_url,
       docs: docs(),
 
       # Testing
@@ -80,10 +82,12 @@ defmodule ExTopology.MixProject do
   defp docs do
     [
       main: "readme",
+      name: "ExTopology",
       source_url: @source_url,
       source_ref: "v#{@version}",
-      logo: "assets/ex_topology.svg",
+      homepage_url: @source_url,
       assets: %{"assets" => "assets"},
+      logo: "assets/ex_topology.svg",
       extras: [
         "README.md",
         "LICENSE"

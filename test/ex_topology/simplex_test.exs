@@ -122,21 +122,21 @@ defmodule ExTopology.SimplexTest do
     end
   end
 
-  describe "is_face?/2" do
+  describe "face?/2" do
     test "edge is face of triangle" do
-      assert Simplex.is_face?([0, 1], [0, 1, 2])
+      assert Simplex.face?([0, 1], [0, 1, 2])
     end
 
     test "vertex is face of edge" do
-      assert Simplex.is_face?([0], [0, 1])
+      assert Simplex.face?([0], [0, 1])
     end
 
     test "non-face returns false" do
-      refute Simplex.is_face?([0, 3], [0, 1, 2])
+      refute Simplex.face?([0, 3], [0, 1, 2])
     end
 
     test "simplex is face of itself" do
-      assert Simplex.is_face?([0, 1, 2], [0, 1, 2])
+      assert Simplex.face?([0, 1, 2], [0, 1, 2])
     end
   end
 

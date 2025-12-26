@@ -248,26 +248,28 @@ defmodule ExTopology.Diagram do
     persts =
       diagram
       |> persistences()
-      |> Enum.reject(&(&1 == :infinity))
-      # Filter zero persistence (birth == death)
-      |> Enum.reject(&(&1 == 0.0))
+      # Filter infinity and zero persistence (birth == death) in one pass
+      |> Enum.reject(fn p -> p == :infinity or p == 0.0 end)
 
-    if Enum.empty?(persts) do
-      0.0
-    else
-      total = Enum.sum(persts)
+    compute_entropy(persts)
+  end
 
-      if total == 0.0 do
-        0.0
-      else
-        persts
-        |> Enum.map(fn p ->
-          prob = p / total
-          if prob > 0, do: -prob * :math.log(prob), else: 0.0
-        end)
-        |> Enum.sum()
-      end
-    end
+  defp compute_entropy([]), do: 0.0
+
+  defp compute_entropy(persts) do
+    total = Enum.sum(persts)
+    do_compute_entropy(persts, total)
+  end
+
+  defp do_compute_entropy(_persts, total) when total == 0.0, do: 0.0
+
+  defp do_compute_entropy(persts, total) do
+    persts
+    |> Enum.map(fn p ->
+      prob = p / total
+      if prob > 0, do: -prob * :math.log(prob), else: 0.0
+    end)
+    |> Enum.sum()
   end
 
   @doc """

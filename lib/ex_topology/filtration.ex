@@ -318,9 +318,8 @@ defmodule ExTopology.Filtration do
   """
   @spec validate(filtration()) :: :ok | {:error, String.t()}
   def validate(filtration) do
-    with :ok <- check_ordering(filtration),
-         :ok <- check_faces(filtration) do
-      :ok
+    with :ok <- check_ordering(filtration) do
+      check_faces(filtration)
     end
   end
 

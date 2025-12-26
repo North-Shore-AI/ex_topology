@@ -5,6 +5,42 @@ All notable changes to ExTopology will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2025-12-25
+
+### Added
+
+- **Crucible Stage Integration**
+  - `ExTopology.Stage` - Crucible.Stage implementation for TDA metrics in experiment pipelines
+  - Computes Betti numbers, persistence diagrams, fragility scores, and embedding metrics
+  - Configurable options: `:data_key`, `:compute`, `:k`, `:max_dimension`
+  - Results stored in `ctx.metrics[:tda]` with detailed data in assigns
+
+- **Documentation**
+  - Crucible Integration section in README with usage examples
+  - Implementation documentation in `docs/20251225/`
+  - Gap analysis and current state documentation
+
+- **New Logo**
+  - Updated `assets/ex_topology.svg` with TDA-themed design featuring persistence diagrams and Betti numbers
+
+### Changed
+
+- **Code Quality Improvements (Credo compliance)**
+  - Renamed `is_face?/2` to `face?/2` in `ExTopology.Simplex`
+  - Renamed `is_clique?/1` to `clique?/1` (internal function)
+  - Refactored `entropy/1` in `ExTopology.Diagram` to reduce nesting
+  - Refactored `feature_stability_scores/2` in `ExTopology.Fragility`
+  - Refactored `compute_betti_number/2` in `ExTopology.Persistence`
+  - Simplified `validate/1` in `ExTopology.Filtration` (removed redundant `with` clause)
+  - Fixed alias ordering in multiple modules
+
+### Fixed
+
+- Proper handling of edge cases in persistence computations
+- Improved tensor validation in Stage module
+
+---
+
 ## [0.1.1] - 2025-11-24
 
 ### Added

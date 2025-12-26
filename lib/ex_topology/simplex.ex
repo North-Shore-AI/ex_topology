@@ -202,14 +202,14 @@ defmodule ExTopology.Simplex do
 
   ## Examples
 
-      iex> ExTopology.Simplex.is_face?([0, 1], [0, 1, 2])
+      iex> ExTopology.Simplex.face?([0, 1], [0, 1, 2])
       true
 
-      iex> ExTopology.Simplex.is_face?([0, 3], [0, 1, 2])
+      iex> ExTopology.Simplex.face?([0, 3], [0, 1, 2])
       false
   """
-  @spec is_face?(simplex(), simplex()) :: boolean()
-  def is_face?(face, simplex) do
+  @spec face?(simplex(), simplex()) :: boolean()
+  def face?(face, simplex) do
     face_set = MapSet.new(normalize(face))
     simplex_set = MapSet.new(normalize(simplex))
     MapSet.subset?(face_set, simplex_set)
@@ -275,14 +275,14 @@ defmodule ExTopology.Simplex do
     # Filter to only those that are cliques
     dim_simplices =
       candidates
-      |> Enum.filter(fn simplex -> is_clique?(graph, simplex) end)
+      |> Enum.filter(fn simplex -> clique?(graph, simplex) end)
 
     complex = Map.put(complex, dim, dim_simplices)
 
     build_clique_complex(graph, complex, vertices, dim + 1, max_dim)
   end
 
-  defp is_clique?(graph, vertices) do
+  defp clique?(graph, vertices) do
     # Check if all pairs of vertices are connected
     pairs = combinations(vertices, 2)
 

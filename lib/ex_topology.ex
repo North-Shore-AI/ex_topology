@@ -51,8 +51,8 @@ defmodule ExTopology do
   ## Examples
 
       iex> ExTopology.version()
-      "0.1.0"
+      "0.2.0"
   """
   @spec version() :: String.t()
-  def version, do: "0.1.0"
+  def version, do: "0.2.0"
 end

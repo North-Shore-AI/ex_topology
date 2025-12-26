@@ -313,45 +313,42 @@ defmodule ExTopology.Persistence do
     end)
   end
 
-  defp compute_betti_number(complex, dim) do
-    # β_k = dim(ker(∂_k)) - dim(im(∂_{k+1}))
-    # For simplicity, use Euler characteristic for graphs (dim ≤ 1)
+  defp compute_betti_number(complex, 0) do
+    # β₀ = number of components
+    vertices = Map.get(complex, 0, []) |> List.flatten() |> Enum.uniq()
+    edges = Map.get(complex, 1, [])
+    compute_beta_zero(vertices, edges)
+  end
 
-    cond do
-      dim == 0 ->
-        # β₀ = number of components
-        # Build graph from 1-simplices and count components
-        vertices = Map.get(complex, 0, []) |> List.flatten() |> Enum.uniq()
-        edges = Map.get(complex, 1, [])
+  defp compute_betti_number(complex, 1) do
+    # β₁ = E - V + C (cyclomatic number)
+    vertices = Map.get(complex, 0, []) |> List.flatten() |> Enum.uniq()
+    edges = Map.get(complex, 1, [])
+    compute_beta_one(vertices, edges)
+  end
 
-        if Enum.empty?(edges) do
-          length(vertices)
-        else
-          g = Graph.new()
-          g = Enum.reduce(vertices, g, fn v, acc -> Graph.add_vertex(acc, v) end)
-          g = Enum.reduce(edges, g, fn [v1, v2], acc -> Graph.add_edge(acc, v1, v2) end)
-          ExTopology.Graph.beta_zero(g)
-        end
+  defp compute_betti_number(_complex, _dim) do
+    # For dim > 1, would need full boundary matrix computation
+    # Return 0 as placeholder
+    0
+  end
 
-      dim == 1 ->
-        # β₁ = E - V + C (cyclomatic number)
-        vertices = Map.get(complex, 0, []) |> List.flatten() |> Enum.uniq()
-        edges = Map.get(complex, 1, [])
+  defp compute_beta_zero(vertices, []), do: length(vertices)
 
-        if Enum.empty?(edges) do
-          0
-        else
-          g = Graph.new()
-          g = Enum.reduce(vertices, g, fn v, acc -> Graph.add_vertex(acc, v) end)
-          g = Enum.reduce(edges, g, fn [v1, v2], acc -> Graph.add_edge(acc, v1, v2) end)
-          ExTopology.Graph.beta_one(g)
-        end
+  defp compute_beta_zero(vertices, edges) do
+    build_graph(vertices, edges) |> ExTopology.Graph.beta_zero()
+  end
 
-      true ->
-        # For dim > 1, would need full boundary matrix computation
-        # Return 0 as placeholder
-        0
-    end
+  defp compute_beta_one(_vertices, []), do: 0
+
+  defp compute_beta_one(vertices, edges) do
+    build_graph(vertices, edges) |> ExTopology.Graph.beta_one()
+  end
+
+  defp build_graph(vertices, edges) do
+    g = Graph.new()
+    g = Enum.reduce(vertices, g, fn v, acc -> Graph.add_vertex(acc, v) end)
+    Enum.reduce(edges, g, fn [v1, v2], acc -> Graph.add_edge(acc, v1, v2) end)
   end
 
   @doc """

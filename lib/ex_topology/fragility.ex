@@ -27,7 +27,7 @@ defmodule ExTopology.Fragility do
       critical_points = ExTopology.Fragility.identify_critical_points(scores, threshold: 0.5)
   """
 
-  alias ExTopology.{Distance, Filtration, Persistence, Diagram}
+  alias ExTopology.{Diagram, Distance, Filtration, Persistence}
 
   @type point_cloud :: Nx.Tensor.t()
   @type fragility_scores :: %{non_neg_integer() => float()}
@@ -188,21 +188,23 @@ defmodule ExTopology.Fragility do
       |> Diagram.persistences()
       |> Enum.reject(&(&1 == :infinity))
 
-    if Enum.empty?(persistences) do
-      []
-    else
-      if normalize do
-        max_pers = Enum.max(persistences)
+    compute_stability_scores(persistences, normalize)
+  end
 
-        if max_pers > 0 do
-          Enum.map(persistences, fn p -> p / max_pers end)
-        else
-          Enum.map(persistences, fn _ -> 0.0 end)
-        end
-      else
-        persistences
-      end
-    end
+  defp compute_stability_scores([], _normalize), do: []
+  defp compute_stability_scores(persistences, false), do: persistences
+
+  defp compute_stability_scores(persistences, true) do
+    max_pers = Enum.max(persistences)
+    normalize_persistences(persistences, max_pers)
+  end
+
+  defp normalize_persistences(persistences, max_pers) when max_pers > 0 do
+    Enum.map(persistences, fn p -> p / max_pers end)
+  end
+
+  defp normalize_persistences(persistences, _max_pers) do
+    Enum.map(persistences, fn _ -> 0.0 end)
   end
 
   @doc """

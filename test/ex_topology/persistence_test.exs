@@ -2,7 +2,7 @@ defmodule ExTopology.PersistenceTest do
   use ExUnit.Case, async: true
   doctest ExTopology.Persistence
 
-  alias ExTopology.{Persistence, Filtration}
+  alias ExTopology.{Filtration, Persistence}
 
   describe "compute/2" do
     test "computes persistence for simple filtration" do

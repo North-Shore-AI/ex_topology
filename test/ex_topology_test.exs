@@ -3,6 +3,6 @@ defmodule ExTopologyTest do
   doctest ExTopology
 
   test "version returns current version" do
-    assert ExTopology.version() == "0.1.0"
+    assert ExTopology.version() == "0.2.0"
   end
 end

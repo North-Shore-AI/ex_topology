@@ -14,7 +14,7 @@ ExTopology provides foundational topology and TDA algorithms for the Elixir ecos
 
 ## Status
 
-**v0.1.1** - Full TDA pipeline implemented (371 tests passing).
+**v0.2.0** - Crucible Stage integration and code quality improvements.
 
 ## Installation
 
@@ -511,6 +511,76 @@ ExTopology is the topology layer for the North-Shore-AI ecosystem:
 ```
 
 Architecture decision records: [docs/adrs/](https://github.com/North-Shore-AI/ex_topology/tree/main/docs/adrs)
+
+---
+
+## Crucible Integration
+
+ExTopology can be used as a stage in Crucible experiment pipelines via `ExTopology.Stage`.
+
+### Basic Usage
+
+```elixir
+pipeline = [
+  {Crucible.Stage.DataLoad, %{dataset: "embeddings"}},
+  {ExTopology.Stage, %{
+    data_key: :embeddings,
+    compute: [:betti, :persistence, :fragility, :embedding],
+    k: 10,
+    max_dimension: 1
+  }}
+]
+```
+
+### Available Metrics
+
+The stage computes TDA metrics and stores them in `ctx.metrics[:tda]`:
+
+| Option | Metrics | Description |
+|--------|---------|-------------|
+| `:betti` | `beta_zero`, `beta_one`, `euler_characteristic` | Graph topology invariants |
+| `:persistence` | `total_persistence`, `max_persistence` | Persistent homology summary |
+| `:fragility` | `robustness_score`, `mean_sensitivity` | Topological stability |
+| `:embedding` | `knn_variance`, `mean_knn_distance`, `density_mean` | Embedding quality |
+
+### Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `:data_key` | `:embeddings` | Key in `ctx.assigns` containing point cloud data |
+| `:compute` | `[:betti, :embedding]` | List of metric categories to compute |
+| `:k` | `10` | Number of neighbors for k-NN graph |
+| `:max_dimension` | `1` | Maximum dimension for persistence computation |
+
+### Output
+
+Results are stored in:
+- `ctx.metrics[:tda]` - Summary metrics map
+- `ctx.assigns[:tda_diagrams]` - Persistence diagrams (if `:persistence` computed)
+- `ctx.assigns[:tda_fragility]` - Fragility details (if `:fragility` computed)
+
+### Example
+
+```elixir
+alias ExTopology.Stage
+
+# Create context with embeddings
+ctx = %{
+  assigns: %{embeddings: Nx.tensor([[0.0, 0.0], [1.0, 0.0], [0.5, 0.866]])},
+  metrics: %{}
+}
+
+# Run TDA analysis
+{:ok, result} = Stage.run(ctx, %{
+  compute: [:betti, :persistence],
+  k: 2
+})
+
+# Access results
+result.metrics[:tda][:beta_zero]      # Number of connected components
+result.metrics[:tda][:beta_one]       # Number of independent cycles
+result.metrics[:tda][:total_persistence]  # Sum of feature lifetimes
+```
 
 ---
 

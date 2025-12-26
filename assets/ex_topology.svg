@@ -1,128 +1,161 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1180" role="img" aria-labelledby="title desc">
-  <title id="title">ex_topology hexagonal identity</title>
-  <desc id="desc">An intricate, world-class hexagonal logo evoking mathematical elegance, topology, and structured creativity.</desc>
+<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-labelledby="title desc">
+  <title id="title">ex_topology - Topological Data Analysis</title>
+  <desc id="desc">A world-class hexagonal logo featuring persistence diagrams, Betti numbers, and topological structures with deep space purple and bright magenta/cyan colors.</desc>
+
   <defs>
-    <linearGradient id="bg" x1="15%" y1="5%" x2="85%" y2="95%">
-      <stop offset="0%" stop-color="#0e1c31"/>
-      <stop offset="48%" stop-color="#132f55"/>
-      <stop offset="100%" stop-color="#0a0c17"/>
+    <!-- Background gradient: deep space purple to indigo -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a0f3a"/>
+      <stop offset="50%" stop-color="#2d1b5e"/>
+      <stop offset="100%" stop-color="#0f0820"/>
     </linearGradient>
-    <radialGradient id="halo" cx="50%" cy="32%" r="65%">
-      <stop offset="0%" stop-color="#38e8ff" stop-opacity="0.55"/>
-      <stop offset="40%" stop-color="#2fb7ff" stop-opacity="0.32"/>
-      <stop offset="100%" stop-color="#111325" stop-opacity="0"/>
+
+    <!-- Radial halo glow -->
+    <radialGradient id="haloGlow" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#ff00ff" stop-opacity="0.25"/>
+      <stop offset="50%" stop-color="#00ffff" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#1a0f3a" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="edgeStroke" x1="0%" y1="20%" x2="100%" y2="80%">
-      <stop offset="0%" stop-color="#70ffcf"/>
-      <stop offset="45%" stop-color="#4ac2ff"/>
-      <stop offset="100%" stop-color="#9c64ff"/>
+
+    <!-- Hexagon frame gradient -->
+    <linearGradient id="hexStroke" x1="0%" y1="20%" x2="100%" y2="80%">
+      <stop offset="0%" stop-color="#ff00ff"/>
+      <stop offset="50%" stop-color="#00ffff"/>
+      <stop offset="100%" stop-color="#ff00ff"/>
     </linearGradient>
-    <linearGradient id="innerFacet" x1="30%" y1="20%" x2="80%" y2="90%">
-      <stop offset="0%" stop-color="#10192b" stop-opacity="0.9"/>
-      <stop offset="45%" stop-color="#0f203d" stop-opacity="0.85"/>
-      <stop offset="100%" stop-color="#0d0f1f" stop-opacity="0.95"/>
+
+    <!-- Persistence barcode gradient -->
+    <linearGradient id="barcodeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff1493"/>
+      <stop offset="50%" stop-color="#00ffff"/>
+      <stop offset="100%" stop-color="#ff00ff"/>
     </linearGradient>
-    <linearGradient id="ribbon" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ff9f2f"/>
-      <stop offset="40%" stop-color="#ff3ca0"/>
-      <stop offset="75%" stop-color="#5bd9ff"/>
-      <stop offset="100%" stop-color="#3bffad"/>
+
+    <!-- Simplicial edge gradient -->
+    <linearGradient id="edgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00ffff"/>
+      <stop offset="100%" stop-color="#ff00ff"/>
     </linearGradient>
-    <linearGradient id="mesh" x1="0%" y1="50%" x2="100%" y2="50%">
-      <stop offset="0%" stop-color="#42ffd2" stop-opacity="0.55"/>
-      <stop offset="50%" stop-color="#54a5ff" stop-opacity="0.45"/>
-      <stop offset="100%" stop-color="#ad7bff" stop-opacity="0.6"/>
-    </linearGradient>
-    <linearGradient id="gridLine" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#79ffe4" stop-opacity="0.3"/>
-      <stop offset="100%" stop-color="#7a9cff" stop-opacity="0.08"/>
-    </linearGradient>
-    <radialGradient id="node" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
-      <stop offset="35%" stop-color="#8bfff3" stop-opacity="0.9"/>
-      <stop offset="100%" stop-color="#19c6ff" stop-opacity="0.0"/>
+
+    <!-- Cyan/magenta node radial gradient -->
+    <radialGradient id="nodeGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+      <stop offset="40%" stop-color="#00ffff" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#ff00ff" stop-opacity="0"/>
     </radialGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="24" stdDeviation="22" flood-color="#05070f" flood-opacity="0.75"/>
+
+    <!-- Magenta node gradient -->
+    <radialGradient id="magentaNode" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ff00ff" stop-opacity="1"/>
+      <stop offset="50%" stop-color="#ff1493" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#ff00ff" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Cyan node gradient -->
+    <radialGradient id="cyanNode" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00ffff" stop-opacity="1"/>
+      <stop offset="50%" stop-color="#00d9ff" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#00ffff" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Soft glow filter -->
+    <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feColorMatrix in="blur" type="saturate" values="1.2"/>
     </filter>
-    <filter id="glow">
-      <feGaussianBlur stdDeviation="4" result="blur"/>
-      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.45 0 0 0 0 0.85 0 0 0 0 1 0 0 0 0.9 0"/>
+
+    <!-- Sharp glow filter for nodes -->
+    <filter id="nodeGlow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="1.5" result="blur"/>
+      <feFlood flood-color="#00ffff" flood-opacity="0.6" result="color"/>
+      <feComposite in="color" in2="blur" operator="in" result="glow"/>
+      <feComposite in="glow" in2="SourceGraphic" operator="arithmetic" k2="1" k3="1" result="glowed"/>
     </filter>
-    <filter id="softGlow">
-      <feGaussianBlur stdDeviation="12" result="blur"/>
-      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.25 0 0 0 0 0.55 0 0 0 0 0.9 0 0 0 0.45 0"/>
+
+    <!-- Drop shadow -->
+    <filter id="dropShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#000000" flood-opacity="0.5"/>
     </filter>
-    <clipPath id="hexMask">
-      <polygon id="hexagon" points="512,180 876,390 876,810 512,1020 148,810 148,390"/>
+
+    <!-- Clip path for hexagon -->
+    <clipPath id="hexClip">
+      <polygon points="100,20 170,55 170,145 100,180 30,145 30,55"/>
     </clipPath>
   </defs>
 
-  <g filter="url(#shadow)">
-    <polygon points="512,180 876,390 876,810 512,1020 148,810 148,390" fill="url(#bg)"/>
-    <polygon points="512,180 876,390 876,810 512,1020 148,810 148,390" fill="url(#halo)"/>
-    <polygon points="512,205 850,395 850,805 512,995 174,805 174,395" fill="url(#innerFacet)" opacity="0.9"/>
-    <polygon points="512,180 876,390 876,810 512,1020 148,810 148,390" fill="none" stroke="url(#edgeStroke)" stroke-width="14" stroke-linejoin="round"/>
+  <!-- Background hexagon with gradients -->
+  <g filter="url(#dropShadow)">
+    <!-- Outer hexagon frame -->
+    <polygon points="100,20 170,55 170,145 100,180 30,145 30,55" fill="url(#bgGrad)" stroke="url(#hexStroke)" stroke-width="2.5" stroke-linejoin="round"/>
+
+    <!-- Halo glow -->
+    <polygon points="100,20 170,55 170,145 100,180 30,145 30,55" fill="url(#haloGlow)"/>
   </g>
 
-  <g clip-path="url(#hexMask)">
-    <rect x="120" y="160" width="784" height="900" fill="url(#halo)" opacity="0.45"/>
-
-    <g stroke="url(#gridLine)" stroke-width="2">
-      <path d="M220 220 L880 780" opacity="0.35"/>
-      <path d="M170 330 L830 890" opacity="0.25"/>
-      <path d="M200 190 L600 1040" opacity="0.25"/>
-      <path d="M430 140 L890 820" opacity="0.18"/>
-      <path d="M140 640 L760 1160" opacity="0.18"/>
-      <path d="M320 180 L920 640" opacity="0.22"/>
-      <path d="M100 520 L780 1040" opacity="0.12"/>
+  <!-- Clipped content inside hexagon -->
+  <g clip-path="url(#hexClip)">
+    <!-- Subtle grid background -->
+    <g stroke="#00ffff" stroke-width="0.4" opacity="0.08">
+      <line x1="30" y1="50" x2="170" y2="50"/>
+      <line x1="30" y1="80" x2="170" y2="80"/>
+      <line x1="30" y1="110" x2="170" y2="110"/>
+      <line x1="30" y1="140" x2="170" y2="140"/>
+      <line x1="50" y1="20" x2="50" y2="180"/>
+      <line x1="100" y1="20" x2="100" y2="180"/>
+      <line x1="150" y1="20" x2="150" y2="180"/>
     </g>
 
-    <g stroke="url(#mesh)" stroke-width="3.5" opacity="0.32">
-      <path d="M220 470 Q512 280 804 470" fill="none"/>
-      <path d="M220 630 Q512 860 804 630" fill="none"/>
-      <path d="M270 410 Q512 530 754 410" fill="none"/>
-      <path d="M270 690 Q512 570 754 690" fill="none"/>
-      <path d="M512 260 Q700 420 512 860 Q324 420 512 260 Z" fill="none" stroke-width="4"/>
+    <!-- Persistence barcode diagram (bottom left) -->
+    <g opacity="0.6">
+      <rect x="35" y="125" width="20" height="1.5" fill="url(#barcodeGrad)" filter="url(#softGlow)"/>
+      <rect x="35" y="135" width="28" height="1.5" fill="url(#barcodeGrad)" filter="url(#softGlow)"/>
+      <rect x="35" y="145" width="35" height="1.5" fill="url(#barcodeGrad)" filter="url(#softGlow)"/>
+      <rect x="35" y="155" width="18" height="1.5" fill="url(#barcodeGrad)" filter="url(#softGlow)"/>
     </g>
 
-    <g filter="url(#softGlow)" opacity="0.5">
-      <path d="M168 700 C250 520 410 520 512 610 C612 700 770 700 860 520" fill="none" stroke="url(#mesh)" stroke-width="18" stroke-linecap="round"/>
-      <path d="M180 420 C280 350 400 360 512 430 C622 500 752 500 860 440" fill="none" stroke="url(#mesh)" stroke-width="14" stroke-linecap="round"/>
+    <!-- Betti number annotation (top right) - simplified -->
+    <g opacity="0.5" font-family="monospace" font-size="6" fill="#00ffff">
+      <text x="145" y="35">β₁</text>
     </g>
 
-    <g filter="url(#glow)">
-      <path d="M170 560 C250 400 420 320 512 360 C630 410 700 590 830 580 C910 575 960 520 1020 420" fill="none" stroke="url(#ribbon)" stroke-width="10" stroke-linecap="round"/>
-      <path d="M120 520 C220 820 640 940 920 640" fill="none" stroke="url(#ribbon)" stroke-width="8" stroke-linecap="round" opacity="0.8"/>
+    <!-- Central simplicial complex - triangle and edges -->
+    <g>
+      <!-- Outer triangle simplices -->
+      <path d="M 100 40 L 65 120 L 135 120 Z" fill="none" stroke="url(#edgeGrad)" stroke-width="1.2" opacity="0.7" filter="url(#softGlow)"/>
+
+      <!-- Inner connecting edges -->
+      <line x1="100" y1="40" x2="100" y2="85" stroke="url(#edgeGrad)" stroke-width="1" opacity="0.8" filter="url(#softGlow)"/>
+      <line x1="65" y1="120" x2="100" y2="85" stroke="url(#edgeGrad)" stroke-width="1" opacity="0.8" filter="url(#softGlow)"/>
+      <line x1="135" y1="120" x2="100" y2="85" stroke="url(#edgeGrad)" stroke-width="1" opacity="0.8" filter="url(#softGlow)"/>
     </g>
 
-    <path d="M210 570 C260 350 460 260 612 320 C782 385 840 590 760 730 C680 865 480 920 350 820 C250 742 210 665 210 570 Z" fill="url(#ribbon)" opacity="0.15"/>
-
-    <path d="M240 620 C260 520 320 450 410 430 C520 405 640 460 700 570 C745 652 740 760 690 820 C640 880 540 900 470 870 C360 824 230 760 240 620 Z" fill="none" stroke="url(#edgeStroke)" stroke-width="6" stroke-dasharray="14 12" opacity="0.6"/>
-
-    <g fill="url(#node)" stroke="#0a0f1c" stroke-width="1.5">
-      <circle cx="512" cy="360" r="10"/>
-      <circle cx="260" cy="520" r="9"/>
-      <circle cx="764" cy="520" r="9"/>
-      <circle cx="512" cy="770" r="11"/>
-      <circle cx="380" cy="660" r="8.5"/>
-      <circle cx="644" cy="660" r="8.5"/>
-      <circle cx="512" cy="540" r="7.5"/>
+    <!-- Filtration layers - concentric structure -->
+    <g opacity="0.3" stroke="#ff00ff">
+      <circle cx="100" cy="85" r="22" fill="none" stroke-width="0.6"/>
+      <circle cx="100" cy="85" r="30" fill="none" stroke-width="0.6"/>
+      <circle cx="100" cy="85" r="38" fill="none" stroke-width="0.6"/>
     </g>
 
-    <g stroke="url(#edgeStroke)" stroke-width="3.5" opacity="0.75">
-      <path d="M512 360 L260 520 L380 660 L512 540 L644 660 L764 520 Z" fill="none"/>
-      <path d="M380 660 L512 770 L644 660" fill="none"/>
-    </g>
+    <!-- Key vertices/nodes with glows -->
+    <!-- Top vertex (magenta/cyan) -->
+    <circle cx="100" cy="40" r="2.5" fill="url(#nodeGrad)" filter="url(#nodeGlow)" stroke="#00ffff" stroke-width="0.5"/>
 
-    <g opacity="0.16">
-      <path d="M512 240 C600 300 690 420 700 540 C710 660 660 780 512 840 C364 780 314 660 324 540 C334 420 424 300 512 240 Z" fill="url(#halo)"/>
-      <path d="M512 260 C610 320 680 420 690 528 C700 640 640 760 512 800 C384 760 324 640 334 528 C344 420 414 320 512 260 Z" fill="url(#bg)"/>
-    </g>
+    <!-- Bottom left vertex (magenta) -->
+    <circle cx="65" cy="120" r="2.3" fill="url(#magentaNode)" filter="url(#nodeGlow)" stroke="#ff00ff" stroke-width="0.5"/>
 
-    <path d="M230 420 Q512 120 794 420 L754 520 Q512 280 270 520 Z" fill="url(#ribbon)" opacity="0.22"/>
-    <path d="M270 800 Q512 1050 754 800 L794 700 Q512 940 230 700 Z" fill="url(#ribbon)" opacity="0.22"/>
+    <!-- Bottom right vertex (cyan) -->
+    <circle cx="135" cy="120" r="2.3" fill="url(#cyanNode)" filter="url(#nodeGlow)" stroke="#00ffff" stroke-width="0.5"/>
+
+    <!-- Central vertex (mixed magenta/cyan) -->
+    <circle cx="100" cy="85" r="1.8" fill="url(#nodeGrad)" filter="url(#nodeGlow)" stroke="#ffffff" stroke-width="0.4"/>
+
+    <!-- Supporting vertices (smaller) -->
+    <circle cx="80" cy="70" r="1.3" fill="url(#cyanNode)" opacity="0.7" filter="url(#nodeGlow)"/>
+    <circle cx="120" cy="70" r="1.3" fill="url(#magentaNode)" opacity="0.7" filter="url(#nodeGlow)"/>
+    <circle cx="72" cy="100" r="1.2" fill="url(#magentaNode)" opacity="0.6" filter="url(#nodeGlow)"/>
+    <circle cx="128" cy="100" r="1.2" fill="url(#cyanNode)" opacity="0.6" filter="url(#nodeGlow)"/>
   </g>
 
-  <polygon points="512,180 876,390 876,810 512,1020 148,810 148,390" fill="none" stroke="url(#edgeStroke)" stroke-width="10" stroke-linejoin="round" opacity="0.95"/>
+  <!-- Outer hexagon border (final) -->
+  <polygon points="100,20 170,55 170,145 100,180 30,145 30,55" fill="none" stroke="url(#hexStroke)" stroke-width="1.8" stroke-linejoin="round" opacity="0.9"/>
 </svg>
